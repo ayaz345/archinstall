@@ -110,8 +110,7 @@ class PartitioningList(ListManager):
 			case 'mark_bootable' if entry:
 				entry.invert_flag(PartitionFlag.Boot)
 			case 'set_filesystem' if entry:
-				fs_type = self._prompt_partition_fs_type()
-				if fs_type:
+				if fs_type := self._prompt_partition_fs_type():
 					entry.fs_type = fs_type
 					# btrfs subvolumes will define mountpoints
 					if fs_type == FilesystemType.Btrfs:
@@ -130,11 +129,10 @@ class PartitioningList(ListManager):
 		entry: PartitionModification,
 		data: List[PartitionModification]
 	) -> List[PartitionModification]:
-		if entry.is_exists_or_modify():
-			entry.status = ModificationStatus.Delete
-			return data
-		else:
+		if not entry.is_exists_or_modify():
 			return [d for d in data if d != entry]
+		entry.status = ModificationStatus.Delete
+		return data
 
 	def _set_compressed(self, partition: PartitionModification):
 		compression = 'compress=zstd'
@@ -177,9 +175,7 @@ class PartitioningList(ListManager):
 		print(header)
 
 		while True:
-			value = TextInput(prompt).run().strip()
-
-			if value:
+			if value := TextInput(prompt).run().strip():
 				mountpoint = Path(value)
 				break
 
@@ -288,13 +284,12 @@ class PartitioningList(ListManager):
 
 	def _reset_confirmation(self) -> MenuSelection:
 		prompt = str(_('This will remove all newly added partitions, continue?'))
-		choice = Menu(prompt, Menu.yes_no(), default_option=Menu.no(), skip=False).run()
-		return choice
+		return Menu(prompt, Menu.yes_no(), default_option=Menu.no(), skip=False).run()
 
 	def _suggest_partition_layout(self, data: List[PartitionModification]) -> List[PartitionModification]:
 		# if modifications have been done already, inform the user
 		# that this operation will erase those modifications
-		if any([not entry.exists() for entry in data]):
+		if any(not entry.exists() for entry in data):
 			choice = self._reset_confirmation()
 			if choice.value == Menu.no():
 				return []
@@ -318,17 +313,14 @@ def manual_partitioning(
 
 	if not preset:
 		# we'll display the existing partitions of the device
-		for partition in device.partition_infos:
-			manual_preset.append(
-				PartitionModification.from_existing_partition(partition)
-			)
+		manual_preset.extend(
+			PartitionModification.from_existing_partition(partition)
+			for partition in device.partition_infos
+		)
 	else:
 		manual_preset = preset
 
 	menu_list = PartitioningList(prompt, device, manual_preset)
 	partitions = menu_list.run()
 
-	if menu_list.is_last_choice_cancel():
-		return preset
-
-	return partitions
+	return preset if menu_list.is_last_choice_cancel() else partitions

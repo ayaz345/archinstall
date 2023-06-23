@@ -36,7 +36,9 @@ class Fido2:
 		# to prevent continous reloading which will slow
 		# down moving the cursor in the menu
 		if not cls._loaded or reload:
-			ret: Optional[str] = SysCommand(f"systemd-cryptenroll --fido2-device=list").decode('UTF-8')
+			ret: Optional[str] = SysCommand(
+				"systemd-cryptenroll --fido2-device=list"
+			).decode('UTF-8')
 			if not ret:
 				error('Unable to retrieve fido2 devices')
 				return []
@@ -83,7 +85,10 @@ class Fido2:
 					worker.write(bytes(password, 'UTF-8'))
 					pw_inputted = True
 			elif pin_inputted is False:
-				if bytes(f"please enter security token pin", 'UTF-8') in worker._trace_log.lower():
+				if (
+					bytes("please enter security token pin", 'UTF-8')
+					in worker._trace_log.lower()
+				):
 					worker.write(bytes(getpass.getpass(" "), 'UTF-8'))
 					pin_inputted = True
 

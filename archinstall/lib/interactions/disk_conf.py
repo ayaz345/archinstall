@@ -72,19 +72,18 @@ def get_default_partition_layout(
 	advanced_option: bool = False
 ) -> List[disk.DeviceModification]:
 
-	if len(devices) == 1:
-		device_modification = suggest_single_disk_layout(
-			devices[0],
-			filesystem_type=filesystem_type,
-			advanced_options=advanced_option
-		)
-		return [device_modification]
-	else:
+	if len(devices) != 1:
 		return suggest_multi_disk_layout(
 			devices,
 			filesystem_type=filesystem_type,
 			advanced_options=advanced_option
 		)
+	device_modification = suggest_single_disk_layout(
+		devices[0],
+		filesystem_type=filesystem_type,
+		advanced_options=advanced_option
+	)
+	return [device_modification]
 
 
 def _manual_partitioning(
@@ -127,23 +126,33 @@ def select_disk_config(
 	).run()
 
 	match choice.type_:
-		case MenuSelectionType.Skip: return preset
-		case MenuSelectionType.Reset: return None
+		case MenuSelectionType.Skip:
+			return preset
+		case MenuSelectionType.Reset:
+			return None
 		case MenuSelectionType.Selection:
 			if choice.single_value == pre_mount_mode:
-				output = "You will use whatever drive-setup is mounted at the specified directory\n"
-				output += "WARNING: Archinstall won't check the suitability of this setup\n"
-
-				path = prompt_dir(str(_('Enter the root directory of the mounted devices: ')), output)
+				output = (
+					"You will use whatever drive-setup is mounted at the specified directory\n"
+					+ "WARNING: Archinstall won't check the suitability of this setup\n"
+				)
+				path = prompt_dir(
+					str(_('Enter the root directory of the mounted devices: ')),
+					output,
+				)
 				mods = disk.device_handler.detect_pre_mounted_mods(path)
 
 				return disk.DiskLayoutConfiguration(
 					config_type=disk.DiskLayoutType.Pre_mount,
 					relative_mountpoint=path,
-					device_modifications=mods
+					device_modifications=mods,
 				)
 
-			preset_devices = [mod.device for mod in preset.device_modifications] if preset else []
+			preset_devices = (
+				[mod.device for mod in preset.device_modifications]
+				if preset
+				else []
+			)
 
 			devices = select_devices(preset_devices)
 
@@ -151,20 +160,19 @@ def select_disk_config(
 				return None
 
 			if choice.value == default_layout:
-				modifications = get_default_partition_layout(devices, advanced_option=advanced_option)
-				if modifications:
+				if modifications := get_default_partition_layout(
+					devices, advanced_option=advanced_option
+				):
 					return disk.DiskLayoutConfiguration(
 						config_type=disk.DiskLayoutType.Default,
-						device_modifications=modifications
+						device_modifications=modifications,
 					)
 			elif choice.value == manual_mode:
 				preset_mods = preset.device_modifications if preset else []
-				modifications = _manual_partitioning(preset_mods, devices)
-
-				if modifications:
+				if modifications := _manual_partitioning(preset_mods, devices):
 					return disk.DiskLayoutConfiguration(
 						config_type=disk.DiskLayoutType.Manual,
-						device_modifications=modifications
+						device_modifications=modifications,
 					)
 
 	return None
@@ -199,7 +207,7 @@ def select_main_filesystem_format(advanced_options=False) -> disk.FilesystemType
 	}
 
 	if advanced_options:
-		options.update({'ntfs': disk.FilesystemType.Ntfs})
+		options['ntfs'] = disk.FilesystemType.Ntfs
 
 	prompt = _('Select which filesystem your main partition should use')
 	choice = Menu(prompt, options, skip=False, sort=False).run()

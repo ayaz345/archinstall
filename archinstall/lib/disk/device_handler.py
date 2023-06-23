@@ -100,8 +100,7 @@ class DeviceHandler(object):
 		return self._devices.get(path, None)
 
 	def get_device_by_partition_path(self, partition_path: Path) -> Optional[BDevice]:
-		partition = self.find_partition(partition_path)
-		if partition:
+		if partition := self.find_partition(partition_path):
 			device: Device = partition.disk.device
 			return self.get_device(Path(device.path))
 		return None
@@ -397,11 +396,7 @@ class DeviceHandler(object):
 		for sub_vol in part_mod.btrfs_subvols:
 			debug(f'Creating subvolume: {sub_vol.name}')
 
-			if luks_handler is not None:
-				subvol_path = self._TMP_BTRFS_MOUNT / sub_vol.name
-			else:
-				subvol_path = self._TMP_BTRFS_MOUNT / sub_vol.name
-
+			subvol_path = self._TMP_BTRFS_MOUNT / sub_vol.name
 			SysCommand(f"btrfs subvolume create {subvol_path}")
 
 			if sub_vol.nodatacow:
@@ -567,11 +562,7 @@ class DeviceHandler(object):
 		return device_mods
 
 	def partprobe(self, path: Optional[Path] = None):
-		if path is not None:
-			command = f'partprobe {path}'
-		else:
-			command = 'partprobe'
-
+		command = f'partprobe {path}' if path is not None else 'partprobe'
 		try:
 			debug(f'Calling partprobe: {command}')
 			SysCommand(command)

@@ -146,12 +146,12 @@ class SysInfo:
 
 	@staticmethod
 	def sys_vendor() -> str:
-		with open(f"/sys/devices/virtual/dmi/id/sys_vendor") as vendor:
+		with open("/sys/devices/virtual/dmi/id/sys_vendor") as vendor:
 			return vendor.read().strip()
 
 	@staticmethod
 	def product_name() -> str:
-		with open(f"/sys/devices/virtual/dmi/id/product_name") as product:
+		with open("/sys/devices/virtual/dmi/id/product_name") as product:
 			return product.read().strip()
 
 	@staticmethod
@@ -216,8 +216,6 @@ class SysInfo:
 			'snd_vx_lib'
 		)
 
-		for loaded_module in _sys_info.loaded_modules:
-			if loaded_module in modules:
-				return True
-
-		return False
+		return any(
+			loaded_module in modules for loaded_module in _sys_info.loaded_modules
+		)

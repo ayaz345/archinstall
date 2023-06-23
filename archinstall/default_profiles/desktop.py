@@ -43,10 +43,7 @@ class DesktopProfile(Profile):
 				combined_greeters.setdefault(profile.default_greeter_type, 0)
 				combined_greeters[profile.default_greeter_type] += 1
 
-		if len(combined_greeters) >= 1:
-			return list(combined_greeters)[0]
-
-		return None
+		return list(combined_greeters)[0] if combined_greeters else None
 
 	def _do_on_select_profiles(self):
 		for profile in self.current_selection:

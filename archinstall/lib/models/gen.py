@@ -8,24 +8,20 @@ class VersionDef:
 
 	@classmethod
 	def parse_version(cls) -> List[str]:
-		if '.' in cls.version_string:
-			versions = cls.version_string.split('.')
-		else:
-			versions = [cls.version_string]
-
-		return versions
+		return (
+			cls.version_string.split('.')
+			if '.' in cls.version_string
+			else [cls.version_string]
+		)
 
 	@classmethod
-	def major(self) -> str:
-		return self.parse_version()[0]
+	def major(cls) -> str:
+		return cls.parse_version()[0]
 
 	@classmethod
 	def minor(cls) -> Optional[str]:
 		versions = cls.parse_version()
-		if len(versions) >= 2:
-			return versions[1]
-
-		return None
+		return versions[1] if len(versions) >= 2 else None
 
 	@classmethod
 	def patch(cls) -> Optional[str]:
@@ -37,12 +33,11 @@ class VersionDef:
 		return None
 
 	def __eq__(self, other) -> bool:
-		if other.major == self.major and \
-			other.minor == self.minor and \
-			other.patch == self.patch:
-
-			return True
-		return False
+		return (
+			other.major == self.major
+			and other.minor == self.minor
+			and other.patch == self.patch
+		)
 
 	def __lt__(self, other) -> bool:
 		if self.major() > other.major():

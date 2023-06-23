@@ -97,11 +97,10 @@ class ListManager:
 		options: List[str] = [key for key, val in data_formatted.items() if val is not None]
 		header = ''
 
-		if len(options) > 0:
+		if options:
 			table_header = [key for key, val in data_formatted.items() if val is None]
 			header = '\n'.join(table_header)
 
-		if len(options) > 0:
 			options.append(self._separator)
 
 		options += self._base_actions

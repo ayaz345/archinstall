@@ -132,7 +132,7 @@ class Menu(TerminalMenu):
 		if not options:
 			raise RequirementError('Menu.__init__() requires at least one option to proceed.')
 
-		if any([o for o in options if not isinstance(o, str)]):
+		if any(o for o in options if not isinstance(o, str)):
 			raise RequirementError('Menu.__init__() requires the options to be of type string')
 
 		if sort:
@@ -150,11 +150,11 @@ class Menu(TerminalMenu):
 			action_info += str(_('ESC to skip'))
 
 		if self._raise_error_on_interrupt:
-			action_info += ', ' if len(action_info) > 0 else ''
+			action_info += ', ' if action_info != "" else ''
 			action_info += str(_('CTRL+C to reset'))
 
 		if multi:
-			action_info += ', ' if len(action_info) > 0 else ''
+			action_info += ', ' if action_info != "" else ''
 			action_info += str(_('TAB to select'))
 
 		if action_info:
@@ -272,8 +272,8 @@ class Menu(TerminalMenu):
 				system('clear')
 				return self.run()
 
-		if selection.type_ == MenuSelectionType.Selection:
-			if selection.value == self.back():
+		if selection.value == self.back():
+			if selection.type_ == MenuSelectionType.Selection:
 				selection.type_ = MenuSelectionType.Skip
 				selection.value = None
 
@@ -324,7 +324,7 @@ class Menu(TerminalMenu):
 				except (IndexError, ValueError):
 					debug(f'Error finding index of {p}: {self._menu_options}')
 
-			if len(indexes) == 0:
+			if not indexes:
 				indexes.append(0)
 
 			return indexes[0]

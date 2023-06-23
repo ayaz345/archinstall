@@ -30,11 +30,7 @@ class DiskEncryptionMenu(AbstractSubMenu):
 		data_store: Dict[str, Any],
 		preset: Optional[DiskEncryption] = None
 	):
-		if preset:
-			self._preset = preset
-		else:
-			self._preset = DiskEncryption()
-
+		self._preset = preset if preset else DiskEncryption()
 		self._modifications = mods
 		super().__init__(data_store=data_store)
 
@@ -98,8 +94,7 @@ class DiskEncryptionMenu(AbstractSubMenu):
 		return None
 
 	def _prev_disk_layouts(self) -> Optional[str]:
-		partitions: Optional[List[PartitionModification]] = self._menu_options['partitions'].current_selection
-		if partitions:
+		if partitions := self._menu_options['partitions'].current_selection:
 			output = str(_('Partitions to be encrypted')) + '\n'
 			output += FormattedOutput.as_table(partitions)
 			return output.rstrip()
@@ -130,9 +125,7 @@ def select_encrypted_password() -> Optional[str]:
 
 def select_hsm(preset: Optional[Fido2Device] = None) -> Optional[Fido2Device]:
 	title = _('Select a FIDO2 device to use for HSM')
-	fido_devices = Fido2.get_fido2_devices()
-
-	if fido_devices:
+	if fido_devices := Fido2.get_fido2_devices():
 		choice = TableMenu(title, data=fido_devices).run()
 		match choice.type_:
 			case MenuSelectionType.Reset:
@@ -155,10 +148,7 @@ def select_partitions_to_encrypt(
 	for mod in modification:
 		partitions += list(filter(lambda x: x.mountpoint != Path('/boot'), mod.partitions))
 
-	# do not allow encrypting existing partitions that are not marked as wipe
-	avail_partitions = list(filter(lambda x: not x.exists(), partitions))
-
-	if avail_partitions:
+	if avail_partitions := list(filter(lambda x: not x.exists(), partitions)):
 		title = str(_('Select which partitions to encrypt'))
 		partition_table = FormattedOutput.as_table(avail_partitions)
 

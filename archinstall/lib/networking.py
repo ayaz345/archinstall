@@ -90,7 +90,6 @@ def fetch_data_from_url(url: str, params: Optional[Dict] = None) -> str:
 
 	try:
 		response = urlopen(full_url, context=ssl_context)
-		data = response.read().decode('UTF-8')
-		return data
+		return response.read().decode('UTF-8')
 	except URLError:
 		raise ValueError(f'Unable to fetch data from url: {url}')

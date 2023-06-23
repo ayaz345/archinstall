@@ -95,7 +95,7 @@ class LocaleMenu(AbstractSubMenu):
 
 def select_locale_lang(preset: Optional[str] = None) -> Optional[str]:
 	locales = list_locales()
-	locale_lang = set([locale.split()[0] for locale in locales])
+	locale_lang = {locale.split()[0] for locale in locales}
 
 	choice = Menu(
 		_('Choose which locale language to use'),
@@ -113,7 +113,7 @@ def select_locale_lang(preset: Optional[str] = None) -> Optional[str]:
 
 def select_locale_enc(preset: Optional[str] = None) -> Optional[str]:
 	locales = list_locales()
-	locale_enc = set([locale.split()[1] for locale in locales])
+	locale_enc = {locale.split()[1] for locale in locales}
 
 	choice = Menu(
 		_('Choose which locale encoding to use'),

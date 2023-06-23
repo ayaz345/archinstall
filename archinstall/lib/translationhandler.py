@@ -28,11 +28,10 @@ class Language:
 		return f'{name} ({self.translation_percent}%)'
 
 	def is_match(self, lang_or_translated_lang: str) -> bool:
-		if self.name_en == lang_or_translated_lang:
-			return True
-		elif self.translated_lang == lang_or_translated_lang:
-			return True
-		return False
+		return (
+			self.name_en == lang_or_translated_lang
+			or self.translated_lang == lang_or_translated_lang
+		)
 
 	def json(self) -> str:
 		return self.name_en
@@ -156,8 +155,7 @@ class TranslationHandler:
 		Get the locales directory path
 		"""
 		cur_path = Path(__file__).parent.parent
-		locales_dir = Path.joinpath(cur_path, 'locales')
-		return locales_dir
+		return Path.joinpath(cur_path, 'locales')
 
 	def _provided_translations(self) -> List[str]:
 		"""
@@ -166,12 +164,11 @@ class TranslationHandler:
 		locales_dir = self._get_locales_dir()
 		filenames = os.listdir(locales_dir)
 
-		translation_files = []
-		for filename in filenames:
-			if len(filename) == 2 or filename == 'pt_BR':
-				translation_files.append(filename)
-
-		return translation_files
+		return [
+			filename
+			for filename in filenames
+			if len(filename) == 2 or filename == 'pt_BR'
+		]
 
 
 class DeferredTranslation:

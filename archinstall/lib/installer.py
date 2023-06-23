@@ -55,11 +55,7 @@ class Installer:
 		if not base_packages:
 			base_packages = __packages__[:3]
 
-		if kernels is None:
-			self.kernels = ['linux']
-		else:
-			self.kernels = kernels
-
+		self.kernels = ['linux'] if kernels is None else kernels
 		self._disk_config = disk_config
 
 		if disk_encryption is None:
@@ -410,13 +406,13 @@ class Installer:
 			raise RequirementError(f'Could not generate fstab, strapping in packages most likely failed (disk out of space?)\n Error: {err}')
 
 		if not gen_fstab:
-			raise RequirementError(f'Genrating fstab returned empty value')
+			raise RequirementError('Genrating fstab returned empty value')
 
 		with open(f"{self.target}/etc/fstab", 'a') as fp:
 			fp.write(gen_fstab)
 
 		if not os.path.isfile(f'{self.target}/etc/fstab'):
-			raise RequirementError(f'Could not create fstab file')
+			raise RequirementError('Could not create fstab file')
 
 		for plugin in plugins.values():
 			if hasattr(plugin, 'on_genfstab'):
@@ -561,15 +557,13 @@ class Installer:
 
 		for plugin in plugins.values():
 			if hasattr(plugin, 'on_configure_nic'):
-				new_conf = plugin.on_configure_nic(
+				if new_conf := plugin.on_configure_nic(
 					network_config.iface,
 					network_config.dhcp,
 					network_config.ip,
 					network_config.gateway,
-					network_config.dns
-				)
-
-				if new_conf:
+					network_config.dns,
+				):
 					conf = new_conf
 
 		with open(f"{self.target}/etc/systemd/network/10-{network_config.iface}.network", "a") as netconf:
@@ -674,7 +668,6 @@ class Installer:
 				if (binary := part.fs_type.installation_binary) is not None:
 					self._binaries.append(binary)
 
-				# There is not yet an fsck tool for NTFS. If it's being used for the root filesystem, the hook should be removed.
 				if part.fs_type.fs_type_mount == 'ntfs3' and part.mountpoint == self.target:
 					if 'fsck' in self._hooks:
 						self._hooks.remove('fsck')
@@ -686,9 +679,8 @@ class Installer:
 
 						if 'sd-encrypt' not in self._hooks:
 							self._hooks.insert(self._hooks.index('filesystems'), 'sd-encrypt')
-					else:
-						if 'encrypt' not in self._hooks:
-							self._hooks.insert(self._hooks.index('filesystems'), 'encrypt')
+					elif 'encrypt' not in self._hooks:
+						self._hooks.insert(self._hooks.index('filesystems'), 'encrypt')
 
 		if not SysInfo.has_uefi():
 			self.base_packages.append('grub')
@@ -758,21 +750,20 @@ class Installer:
 				plugin.on_install(self)
 
 	def setup_swap(self, kind :str = 'zram'):
-		if kind == 'zram':
-			info(f"Setting up swap on zram")
-			self._pacstrap('zram-generator')
+		if kind != 'zram':
+			raise ValueError("Archinstall currently only supports setting up swap on zram")
+		info("Setting up swap on zram")
+		self._pacstrap('zram-generator')
 
-			# We could use the default example below, but maybe not the best idea: https://github.com/archlinux/archinstall/pull/678#issuecomment-962124813
-			# zram_example_location = '/usr/share/doc/zram-generator/zram-generator.conf.example'
-			# shutil.copy2(f"{self.target}{zram_example_location}", f"{self.target}/usr/lib/systemd/zram-generator.conf")
-			with open(f"{self.target}/etc/systemd/zram-generator.conf", "w") as zram_conf:
-				zram_conf.write("[zram0]\n")
+		# We could use the default example below, but maybe not the best idea: https://github.com/archlinux/archinstall/pull/678#issuecomment-962124813
+		# zram_example_location = '/usr/share/doc/zram-generator/zram-generator.conf.example'
+		# shutil.copy2(f"{self.target}{zram_example_location}", f"{self.target}/usr/lib/systemd/zram-generator.conf")
+		with open(f"{self.target}/etc/systemd/zram-generator.conf", "w") as zram_conf:
+			zram_conf.write("[zram0]\n")
 
-			self.enable_service('systemd-zram-setup@zram0.service')
+		self.enable_service('systemd-zram-setup@zram0.service')
 
-			self._zram_enabled = True
-		else:
-			raise ValueError(f"Archinstall currently only supports setting up swap on zram")
+		self._zram_enabled = True
 
 	def _get_boot_partition(self) -> Optional[disk.PartitionModification]:
 		for layout in self._disk_config.device_modifications:
@@ -861,26 +852,26 @@ class Installer:
 
 					for sub_vol in root_partition.btrfs_subvols:
 						if sub_vol.is_root():
-							options_entry = f"rootflags=subvol={sub_vol.name} " + options_entry
+							options_entry = f"rootflags=subvol={sub_vol.name} {options_entry}"
 
 					# Zswap should be disabled when using zram.
 					# https://github.com/archlinux/archinstall/issues/881
 					if self._zram_enabled:
-						options_entry = "zswap.enabled=0 " + options_entry
+						options_entry = f"zswap.enabled=0 {options_entry}"
 
 					if root_partition.fs_type.is_crypto():
 						# TODO: We need to detect if the encrypted device is a whole disk encryption,
 						#       or simply a partition encryption. Right now we assume it's a partition (and we always have)
 						debug('Root partition is an encrypted device, identifying by PARTUUID: {root_partition.partuuid}')
 
-						kernel_options = f"options"
+						kernel_options = "options"
 
 						if self._disk_encryption and self._disk_encryption.hsm_device:
 							# Note: lsblk UUID must be used, not PARTUUID for sd-encrypt to work
 							kernel_options += f' rd.luks.name={root_partition.uuid}=luksdev'
 							# Note: tpm2-device and fido2-device don't play along very well:
 							# https://github.com/archlinux/archinstall/pull/1196#issuecomment-1129715645
-							kernel_options += f' rd.luks.options=fido2-device=auto,password-echo=no'
+							kernel_options += ' rd.luks.options=fido2-device=auto,password-echo=no'
 						else:
 							kernel_options += f' cryptdevice=PARTUUID={root_partition.partuuid}:luksdev'
 
@@ -1141,7 +1132,7 @@ class Installer:
 		sh = shlex.join(['sh', '-c', echo])
 
 		try:
-			SysCommand(f"/usr/bin/arch-chroot {self.target} " + sh[:-1] + " | chpasswd'")
+			SysCommand(f"/usr/bin/arch-chroot {self.target} {sh[:-1]} | chpasswd'")
 			return True
 		except SysCallError:
 			return False
@@ -1209,7 +1200,9 @@ class Installer:
 				except SysCallError as err:
 					raise ServiceException(f"Unable to set locale '{language}' for X11: {err}")
 		else:
-			info(f'X11-Keyboard language was not changed from default (no language specified)')
+			info(
+				'X11-Keyboard language was not changed from default (no language specified)'
+			)
 
 		return True
 
@@ -1219,10 +1212,7 @@ class Installer:
 
 		last_execution_time = b''.join(SysCommand(f"systemctl show --property=ActiveEnterTimestamp --no-pager {service_name}", environment_vars={'SYSTEMD_COLORS': '0'}))
 		last_execution_time = last_execution_time.lstrip(b'ActiveEnterTimestamp=').strip()
-		if not last_execution_time:
-			return None
-
-		return last_execution_time.decode('UTF-8')
+		return None if not last_execution_time else last_execution_time.decode('UTF-8')
 
 	def _service_state(self, service_name: str) -> str:
 		if os.path.splitext(service_name)[1] not in ('.service', '.target', '.timer'):

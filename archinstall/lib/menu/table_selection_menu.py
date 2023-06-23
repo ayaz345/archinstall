@@ -41,11 +41,7 @@ class TableMenu(Menu):
 		self._custom_options = custom_menu_options
 		self._multi = multi
 
-		if multi:
-			header_padding = 7
-		else:
-			header_padding = 2
-
+		header_padding = 7 if multi else 2
 		if data is not None:
 			table_text = FormattedOutput.as_table(data)
 			rows = table_text.split('\n')
@@ -65,7 +61,7 @@ class TableMenu(Menu):
 
 		preset_values = self._preset_values(preset)
 
-		extra_bottom_space = True if preview_command else False
+		extra_bottom_space = bool(preview_command)
 
 		super().__init__(
 			title,
@@ -94,9 +90,9 @@ class TableMenu(Menu):
 
 		# the actual preset value has to be in non-escaped form
 		pure_option_rows = {o.replace(' ', ''): self._unescape_row(o) for o in self._options.keys()}
-		preset_rows = [row for pure, row in pure_option_rows.items() if pure in pure_data_rows]
-
-		return preset_rows
+		return [
+			row for pure, row in pure_option_rows.items() if pure in pure_data_rows
+		]
 
 	def _table_show_preview(self, preview_command: Optional[Callable], selection: Any) -> Optional[str]:
 		if preview_command:
@@ -141,11 +137,11 @@ class TableMenu(Menu):
 		options = {key: val for key, val in table.items() if val is not None}
 		header = ''
 
-		if len(options) > 0:
+		if options:
 			table_header = [key for key, val in table.items() if val is None]
 			header = '\n'.join(table_header)
 
 		custom = {key: None for key in self._custom_options}
-		options.update(custom)
+		options |= custom
 
 		return options, header

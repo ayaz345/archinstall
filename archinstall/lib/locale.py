@@ -34,17 +34,17 @@ def list_x11_keyboard_languages() -> Iterator[str]:
 
 
 def verify_keyboard_layout(layout :str) -> bool:
-	for language in list_keyboard_languages():
-		if layout.lower() == language.lower():
-			return True
-	return False
+	return any(
+		layout.lower() == language.lower()
+		for language in list_keyboard_languages()
+	)
 
 
 def verify_x11_keyboard_layout(layout :str) -> bool:
-	for language in list_x11_keyboard_languages():
-		if layout.lower() == language.lower():
-			return True
-	return False
+	return any(
+		layout.lower() == language.lower()
+		for language in list_x11_keyboard_languages()
+	)
 
 
 def set_keyboard_language(locale :str) -> bool:

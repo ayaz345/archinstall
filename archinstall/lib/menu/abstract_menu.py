@@ -122,9 +122,8 @@ class Selector:
 
 		if self._display_func:
 			current = self._display_func(self._current_selection)
-		else:
-			if self._current_selection is not None:
-				current = str(self._current_selection)
+		elif self._current_selection is not None:
+			current = str(self._current_selection)
 
 		if current:
 			padding += 5
@@ -140,9 +139,7 @@ class Selector:
 		self._current_selection = current
 
 	def has_selection(self) -> bool:
-		if not self._current_selection:
-			return False
-		return True
+		return bool(self._current_selection)
 
 	def get_selection(self) -> Any:
 		return self._current_selection
@@ -214,8 +211,8 @@ class AbstractMenu:
 			raise args[1]
 
 		for key in self._menu_options:
-			selector = self._menu_options[key]
 			if key and key not in self._data_store:
+				selector = self._menu_options[key]
 				self._data_store[key] = selector.current_selection
 
 		self.exit_callback()
@@ -275,22 +272,20 @@ class AbstractMenu:
 
 	def _preview_display(self, selection_name: str) -> Optional[str]:
 		config_name, selector = self._find_selection(selection_name)
-		if preview := selector.preview_func:
-			return preview()
-		return None
+		return preview() if (preview := selector.preview_func) else None
 
 	def _get_menu_text_padding(self, entries: List[Selector]):
-		return max([len(str(selection.description)) for selection in entries])
+		return max(len(str(selection.description)) for selection in entries)
 
 	def _find_selection(self, selection_name: str) -> Tuple[str, Selector]:
 		enabled_menus = self._menus_to_enable()
 		padding = self._get_menu_text_padding(list(enabled_menus.values()))
 
-		option = []
-		for k, v in self._menu_options.items():
-			if v.menu_text(padding).strip() == selection_name.strip():
-				option.append((k, v))
-
+		option = [
+			(k, v)
+			for k, v in self._menu_options.items()
+			if v.menu_text(padding).strip() == selection_name.strip()
+		]
 		if len(option) != 1:
 			raise ValueError(f'Selection not found: {selection_name}')
 		config_name = option[0][0]
@@ -371,11 +366,7 @@ class AbstractMenu:
 		- exec action
 		returns True if the loop has to continue, false if the loop can be closed
 		"""
-		if not p_selector:
-			selector = self.option(config_name)
-		else:
-			selector = p_selector
-
+		selector = self.option(config_name) if not p_selector else p_selector
 		self.pre_callback(config_name)
 
 		result = None
@@ -391,10 +382,7 @@ class AbstractMenu:
 
 		self.post_callback(config_name, result)
 
-		if exec_ret_val:
-			return False
-
-		return True
+		return not exec_ret_val
 
 	def _verify_selection_enabled(self, selection_name: str) -> bool:
 		""" general """
@@ -417,21 +405,18 @@ class AbstractMenu:
 
 	def _menus_to_enable(self) -> dict:
 		""" general """
-		enabled_menus = {}
-
-		for name, selection in self._menu_options.items():
-			if self._verify_selection_enabled(name):
-				enabled_menus[name] = selection
-
+		enabled_menus = {
+			name: selection
+			for name, selection in self._menu_options.items()
+			if self._verify_selection_enabled(name)
+		}
 		# sort the enabled menu by the order we enabled them in
 		# we'll add the entries that have been enabled via the selector constructor at the top
-		enabled_keys = [i for i in enabled_menus.keys() if i not in self._enabled_order]
+		enabled_keys = [i for i in enabled_menus if i not in self._enabled_order]
 		# and then we add the ones explicitly enabled by the enable function
-		enabled_keys += [i for i in self._enabled_order if i in enabled_menus.keys()]
+		enabled_keys += [i for i in self._enabled_order if i in enabled_menus]
 
-		ordered_menus = {k: enabled_menus[k] for k in enabled_keys}
-
-		return ordered_menus
+		return {k: enabled_menus[k] for k in enabled_keys}
 
 	def option(self, name: str) -> Selector:
 		# TODO check inexistent name

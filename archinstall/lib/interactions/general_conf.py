@@ -15,25 +15,30 @@ if TYPE_CHECKING:
 
 
 def ask_ntp(preset: bool = True) -> bool:
-	prompt = str(_('Would you like to use automatic time synchronization (NTP) with the default time servers?\n'))
-	prompt += str(_('Hardware time and other post-configuration steps might be required in order for NTP to work.\nFor more information, please check the Arch wiki'))
-	if preset:
-		preset_val = Menu.yes()
-	else:
-		preset_val = Menu.no()
+	prompt = str(
+		_(
+			'Would you like to use automatic time synchronization (NTP) with the default time servers?\n'
+		)
+	) + str(
+		_(
+			'Hardware time and other post-configuration steps might be required in order for NTP to work.\nFor more information, please check the Arch wiki'
+		)
+	)
+	preset_val = Menu.yes() if preset else Menu.no()
 	choice = Menu(prompt, Menu.yes_no(), skip=False, preset_values=preset_val, default_option=Menu.yes()).run()
 
-	return False if choice.value == Menu.no() else True
+	return choice.value != Menu.no()
 
 
 def ask_hostname(preset: str = '') -> str:
 	while True:
-		hostname = TextInput(
-			str(_('Desired hostname for the installation: ')),
-			preset
-		).run().strip()
-
-		if hostname:
+		if (
+			hostname := TextInput(
+				str(_('Desired hostname for the installation: ')), preset
+			)
+			.run()
+			.strip()
+		):
 			return hostname
 
 
@@ -101,8 +106,10 @@ def select_archinstall_language(languages: List[Language], preset: Language) -> 
 	# name of the language in its own language
 	options = {lang.display_name: lang for lang in languages}
 
-	title = 'NOTE: If a language can not displayed properly, a proper font must be set manually in the console.\n'
-	title += 'All available fonts can be found in "/usr/share/kbd/consolefonts"\n'
+	title = (
+		'NOTE: If a language can not displayed properly, a proper font must be set manually in the console.\n'
+		+ 'All available fonts can be found in "/usr/share/kbd/consolefonts"\n'
+	)
 	title += 'e.g. setfont LatGrkCyr-8x16 (to display latin/greek/cyrillic characters)\n'
 
 	choice = Menu(
@@ -150,7 +157,11 @@ def ask_additional_packages_to_install(preset: List[str] = []) -> List[str]:
 
 def add_number_of_parrallel_downloads(input_number :Optional[int] = None) -> Optional[int]:
 	max_downloads = 5
-	print(_(f"This option enables the number of parallel downloads that can occur during installation"))
+	print(
+		_(
+			"This option enables the number of parallel downloads that can occur during installation"
+		)
+	)
 	print(str(_("Enter the number of parallel downloads to be enabled.\n (Enter a value between 1 to {})\nNote:")).format(max_downloads))
 	print(str(_(" - Maximum value   : {} ( Allows {} parallel downloads, allows {} downloads at a time )")).format(max_downloads, max_downloads, max_downloads + 1))
 	print(_(" - Minimum value   : 1 ( Allows 1 parallel download, allows 2 downloads at a time )"))
@@ -174,7 +185,9 @@ def add_number_of_parrallel_downloads(input_number :Optional[int] = None) -> Opt
 	with pacman_conf_path.open("w") as fwrite:
 		for line in pacman_conf:
 			if "ParallelDownloads" in line:
-				fwrite.write(f"ParallelDownloads = {input_number+1}\n") if not input_number == 0 else fwrite.write("#ParallelDownloads = 0\n")
+				fwrite.write(
+					f"ParallelDownloads = {input_number+1}\n"
+				) if input_number != 0 else fwrite.write("#ParallelDownloads = 0\n")
 			else:
 				fwrite.write(f"{line}\n")
 

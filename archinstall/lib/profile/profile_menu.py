@@ -18,11 +18,7 @@ class ProfileMenu(AbstractSubMenu):
 		data_store: Dict[str, Any],
 		preset: Optional[ProfileConfiguration] = None
 	):
-		if preset:
-			self._preset = preset
-		else:
-			self._preset = ProfileConfiguration()
-
+		self._preset = preset if preset else ProfileConfiguration()
 		super().__init__(data_store=data_store)
 
 	def setup_selection_menu_options(self):
@@ -89,9 +85,7 @@ class ProfileMenu(AbstractSubMenu):
 
 	def _select_gfx_driver(self, preset: Optional[str] = None) -> Optional[str]:
 		driver = preset
-		profile: Optional[Profile] = self._menu_options['profile'].current_selection
-
-		if profile:
+		if profile := self._menu_options['profile'].current_selection:
 			if profile.is_graphic_driver_supported():
 				driver = select_driver(current_value=preset)
 
@@ -109,9 +103,7 @@ class ProfileMenu(AbstractSubMenu):
 		return driver
 
 	def _preview_profile(self) -> Optional[str]:
-		profile: Optional[Profile] = self._menu_options['profile'].current_selection
-
-		if profile:
+		if profile := self._menu_options['profile'].current_selection:
 			names = profile.current_selection_names()
 			return '\n'.join(names)
 
@@ -122,32 +114,31 @@ def select_greeter(
 	profile: Optional[Profile] = None,
 	preset: Optional[GreeterType] = None
 ) -> Optional[GreeterType]:
-	if not profile or profile.is_greeter_supported():
-		title = str(_('Please chose which greeter to install'))
-		greeter_options = [greeter.value for greeter in GreeterType]
+	if profile and not profile.is_greeter_supported():
+		return None
+	title = str(_('Please chose which greeter to install'))
+	greeter_options = [greeter.value for greeter in GreeterType]
 
-		default: Optional[GreeterType] = None
+	default: Optional[GreeterType] = None
 
-		if preset is not None:
-			default = preset
-		elif profile is not None:
-			default_greeter = profile.default_greeter_type
-			default = default_greeter if default_greeter else None
+	if preset is not None:
+		default = preset
+	elif profile is not None:
+		default_greeter = profile.default_greeter_type
+		default = default_greeter if default_greeter else None
 
-		choice = Menu(
-			title,
-			greeter_options,
-			skip=True,
-			default_option=default.value if default else None
-		).run()
+	choice = Menu(
+		title,
+		greeter_options,
+		skip=True,
+		default_option=default.value if default else None
+	).run()
 
-		match choice.type_:
-			case MenuSelectionType.Skip:
-				return default
+	match choice.type_:
+		case MenuSelectionType.Skip:
+			return default
 
-		return GreeterType(choice.single_value)
-
-	return None
+	return GreeterType(choice.single_value)
 
 
 def select_profile(

@@ -57,10 +57,11 @@ class SwayProfile(XorgProfile):
 		return []
 
 	def _ask_seat_access(self):
-		# need to activate seat service and add to seat group
-		title = str(_('Sway needs access to your seat (collection of hardware devices i.e. keyboard, mouse, etc)'))
-		title += str(_('\n\nChoose an option to give Sway access to your hardware'))
-
+		title = str(
+			_(
+				'Sway needs access to your seat (collection of hardware devices i.e. keyboard, mouse, etc)'
+			)
+		) + str(_('\n\nChoose an option to give Sway access to your hardware'))
 		options = [e.value for e in SeatAccess]
 		default = None
 

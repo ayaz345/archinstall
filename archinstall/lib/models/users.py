@@ -48,7 +48,7 @@ class PasswordStrength(Enum):
 		# https://github.com/archlinux/archinstall/issues/1304#issuecomment-1146768163
 		if digit and upper and lower and symbol:
 			match length:
-				case num if 13 <= num:
+				case num if num >= 13:
 					return PasswordStrength.STRONG
 				case num if 11 <= num <= 12:
 					return PasswordStrength.MODERATE
@@ -58,7 +58,7 @@ class PasswordStrength(Enum):
 					return PasswordStrength.VERY_WEAK
 		elif digit and upper and lower:
 			match length:
-				case num if 14 <= num:
+				case num if num >= 14:
 					return PasswordStrength.STRONG
 				case num if 11 <= num <= 13:
 					return PasswordStrength.MODERATE
@@ -68,7 +68,7 @@ class PasswordStrength(Enum):
 					return PasswordStrength.VERY_WEAK
 		elif upper and lower:
 			match length:
-				case num if 15 <= num:
+				case num if num >= 15:
 					return PasswordStrength.STRONG
 				case num if 12 <= num <= 14:
 					return PasswordStrength.MODERATE
@@ -78,7 +78,7 @@ class PasswordStrength(Enum):
 					return PasswordStrength.VERY_WEAK
 		elif lower or upper:
 			match length:
-				case num if 18 <= num:
+				case num if num >= 18:
 					return PasswordStrength.STRONG
 				case num if 14 <= num <= 17:
 					return PasswordStrength.MODERATE
@@ -130,9 +130,7 @@ class User:
 	def _parse_backwards_compatible(cls, config_users: Dict, sudo: bool) -> List['User']:
 		if len(config_users.keys()) > 0:
 			username = list(config_users.keys())[0]
-			password = config_users[username]['!password']
-
-			if password:
+			if password := config_users[username]['!password']:
 				return [User(username, password, sudo)]
 
 		return []

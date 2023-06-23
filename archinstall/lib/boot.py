@@ -79,20 +79,13 @@ class Boot:
 
 	def __iter__(self) -> Iterator[bytes]:
 		if self.session:
-			for value in self.session:
-				yield value
+			yield from self.session
 
 	def __contains__(self, key: bytes) -> bool:
-		if self.session is None:
-			return False
-
-		return key in self.session
+		return False if self.session is None else key in self.session
 
 	def is_alive(self) -> bool:
-		if self.session is None:
-			return False
-
-		return self.session.is_alive()
+		return False if self.session is None else self.session.is_alive()
 
 	def SysCommand(self, cmd: list, *args, **kwargs) -> SysCommand:
 		if cmd[0][0] != '/' and cmd[0][:2] != './':

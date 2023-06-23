@@ -48,8 +48,7 @@ class ManualNetworkConfig(ListManager):
 
 	def handle_action(self, action: str, entry: Optional[NetworkConfiguration], data: List[NetworkConfiguration]):
 		if action == self._actions[0]:  # add
-			iface_name = self._select_iface(data)
-			if iface_name:
+			if iface_name := self._select_iface(data):
 				iface = NetworkConfiguration(NicType.MANUAL, iface=iface_name)
 				iface = self._edit_iface(iface)
 				data += [iface]
@@ -68,10 +67,7 @@ class ManualNetworkConfig(ListManager):
 		available = set(all_ifaces) - set(existing_ifaces)
 		choice = Menu(str(_('Select interface to add')), list(available), skip=True).run()
 
-		if choice.type_ == MenuSelectionType.Skip:
-			return None
-
-		return choice.value
+		return None if choice.type_ == MenuSelectionType.Skip else choice.value
 
 	def _edit_iface(self, edit_iface: NetworkConfiguration):
 		iface_name = edit_iface.iface
@@ -81,46 +77,39 @@ class ManualNetworkConfig(ListManager):
 		prompt = _('Select which mode to configure for "{}" or skip to use default mode "{}"').format(iface_name, default_mode)
 		mode = Menu(prompt, modes, default_option=default_mode, skip=False).run()
 
-		if mode.value == 'IP (static)':
-			while 1:
-				prompt = _('Enter the IP and subnet for {} (example: 192.168.0.5/24): ').format(iface_name)
-				ip = TextInput(prompt, edit_iface.ip).run().strip()
-				# Implemented new check for correct IP/subnet input
-				try:
-					ipaddress.ip_interface(ip)
-					break
-				except ValueError:
-					warn("You need to enter a valid IP in IP-config mode")
-
-			# Implemented new check for correct gateway IP address
-			gateway = None
-
-			while 1:
-				gateway = TextInput(
-					_('Enter your gateway (router) IP address or leave blank for none: '),
-					edit_iface.gateway
-				).run().strip()
-				try:
-					if len(gateway) > 0:
-						ipaddress.ip_address(gateway)
-					break
-				except ValueError:
-					warn("You need to enter a valid gateway (router) IP address")
-
-			if edit_iface.dns:
-				display_dns = ' '.join(edit_iface.dns)
-			else:
-				display_dns = None
-			dns_input = TextInput(_('Enter your DNS servers (space separated, blank for none): '), display_dns).run().strip()
-
-			dns = []
-			if len(dns_input):
-				dns = dns_input.split(' ')
-
-			return NetworkConfiguration(NicType.MANUAL, iface=iface_name, ip=ip, gateway=gateway, dns=dns, dhcp=False)
-		else:
+		if mode.value != 'IP (static)':
 			# this will contain network iface names
 			return NetworkConfiguration(NicType.MANUAL, iface=iface_name)
+		while 1:
+			prompt = _('Enter the IP and subnet for {} (example: 192.168.0.5/24): ').format(iface_name)
+			ip = TextInput(prompt, edit_iface.ip).run().strip()
+			# Implemented new check for correct IP/subnet input
+			try:
+				ipaddress.ip_interface(ip)
+				break
+			except ValueError:
+				warn("You need to enter a valid IP in IP-config mode")
+
+		# Implemented new check for correct gateway IP address
+		gateway = None
+
+		while 1:
+			gateway = TextInput(
+				_('Enter your gateway (router) IP address or leave blank for none: '),
+				edit_iface.gateway
+			).run().strip()
+			try:
+				if len(gateway) > 0:
+					ipaddress.ip_address(gateway)
+				break
+			except ValueError:
+				warn("You need to enter a valid gateway (router) IP address")
+
+		display_dns = ' '.join(edit_iface.dns) if edit_iface.dns else None
+		dns_input = TextInput(_('Enter your DNS servers (space separated, blank for none): '), display_dns).run().strip()
+
+		dns = dns_input.split(' ') if len(dns_input) else []
+		return NetworkConfiguration(NicType.MANUAL, iface=iface_name, ip=ip, gateway=gateway, dns=dns, dhcp=False)
 
 
 def ask_to_configure_network(

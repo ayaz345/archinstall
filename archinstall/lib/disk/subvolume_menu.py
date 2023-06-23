@@ -37,10 +37,7 @@ class SubvolumeMenu(ListManager):
 		return str(subvolume.name)
 
 	def _prompt_options(self, editing: Optional[SubvolumeModification] = None) -> List[str]:
-		preset_options = []
-		if editing:
-			preset_options = editing.mount_options
-
+		preset_options = editing.mount_options if editing else []
 		choice = Menu(
 			str(_("Select the desired subvolume options ")),
 			['nodatacow', 'compress'],
@@ -49,10 +46,7 @@ class SubvolumeMenu(ListManager):
 			multi=True
 		).run()
 
-		if choice.type_ == MenuSelectionType.Selection:
-			return choice.value  # type: ignore
-
-		return []
+		return choice.value if choice.type_ == MenuSelectionType.Selection else []
 
 	def _add_subvolume(self, editing: Optional[SubvolumeModification] = None) -> Optional[SubvolumeModification]:
 		name = TextInput(f'\n\n{_("Subvolume name")}: ', editing.name if editing else '').run()
@@ -93,7 +87,7 @@ class SubvolumeMenu(ListManager):
 
 				if new_subvolume is not None:
 					# we'll remove the original subvolume and add the modified version
-					data = [d for d in data if d.name != entry.name and d.name != new_subvolume.name]
+					data = [d for d in data if d.name not in [entry.name, new_subvolume.name]]
 					data += [new_subvolume]
 			elif action == self._actions[2]:  # delete
 				data = [d for d in data if d != entry]

@@ -35,15 +35,14 @@ def _localize_path(path: Path) -> Path:
 	"""
 	url = urllib.parse.urlparse(str(path))
 
-	if url.scheme and url.scheme in ('https', 'http'):
-		converted_path = Path(f'/tmp/{path.stem}_{hashlib.md5(os.urandom(12)).hexdigest()}.py')
-
-		with open(converted_path, "w") as temp_file:
-			temp_file.write(urllib.request.urlopen(url.geturl()).read().decode('utf-8'))
-
-		return converted_path
-	else:
+	if not url.scheme or url.scheme not in ('https', 'http'):
 		return path
+	converted_path = Path(f'/tmp/{path.stem}_{hashlib.md5(os.urandom(12)).hexdigest()}.py')
+
+	with open(converted_path, "w") as temp_file:
+		temp_file.write(urllib.request.urlopen(url.geturl()).read().decode('utf-8'))
+
+	return converted_path
 
 
 def _import_via_path(path: Path, namespace: Optional[str] = None) -> Optional[str]:
@@ -77,9 +76,7 @@ def _import_via_path(path: Path, namespace: Optional[str] = None) -> Optional[st
 
 def _find_nth(haystack: List[str], needle: str, n: int) -> Optional[int]:
 	indices = [idx for idx, elem in enumerate(haystack) if elem == needle]
-	if n <= len(indices):
-		return indices[n - 1]
-	return None
+	return indices[n - 1] if n <= len(indices) else None
 
 
 def load_plugin(path: Path):

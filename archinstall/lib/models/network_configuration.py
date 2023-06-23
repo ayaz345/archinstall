@@ -67,9 +67,7 @@ class NetworkConfiguration:
 				network.append(('Address', self.ip))
 			if self.gateway:
 				network.append(('Gateway', self.gateway))
-			for dns in self.dns:
-				network.append(('DNS', dns))
-
+			network.extend(('DNS', dns) for dns in self.dns)
 		config = {'Match': match, 'Network': network}
 
 		config_str = ''
@@ -116,19 +114,16 @@ class NetworkConfigurationHandler:
 
 			installation.enable_service('systemd-networkd')
 			installation.enable_service('systemd-resolved')
-		else:
-			# If user selected to copy the current ISO network configuration
-			# Perform a copy of the config
-			if self._configuration.is_iso():
-				installation.copy_iso_network_config(
-					enable_services=True # Sources the ISO network configuration to the install medium.
-				)
-			elif self._configuration.is_network_manager():
-				installation.add_additional_packages(["networkmanager"])
-				if profile_config and profile_config.profile:
-					if profile_config.profile.is_desktop_type_profile():
-						installation.add_additional_packages(["network-manager-applet"])
-				installation.enable_service('NetworkManager.service')
+		elif self._configuration.is_iso():
+			installation.copy_iso_network_config(
+				enable_services=True # Sources the ISO network configuration to the install medium.
+			)
+		elif self._configuration.is_network_manager():
+			installation.add_additional_packages(["networkmanager"])
+			if profile_config and profile_config.profile:
+				if profile_config.profile.is_desktop_type_profile():
+					installation.add_additional_packages(["network-manager-applet"])
+			installation.enable_service('NetworkManager.service')
 
 	def _parse_manual_config(self, configs: List[Dict[str, Any]]) -> Optional[List[NetworkConfiguration]]:
 		configurations = []
@@ -139,7 +134,9 @@ class NetworkConfigurationHandler:
 			if iface is None:
 				raise ValueError('No iface specified for manual configuration')
 
-			if manual_config.get('dhcp', False) or not any([manual_config.get(v, '') for v in ['ip', 'gateway', 'dns']]):
+			if manual_config.get('dhcp', False) or not any(
+				manual_config.get(v, '') for v in ['ip', 'gateway', 'dns']
+			):
 				configurations.append(
 					NetworkConfiguration(NicType.MANUAL, iface=iface)
 				)

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 def generate_password(length :int = 64) -> str:
 	haystack = string.printable # digits, ascii_letters, punctiation (!"#$[] etc) and whitespace
-	return ''.join(secrets.choice(haystack) for i in range(length))
+	return ''.join(secrets.choice(haystack) for _ in range(length))
 
 
 def locate_binary(name :str) -> str:
@@ -79,9 +79,7 @@ class JsonEncoder:
 				else:
 					val = JsonEncoder._encode(val)
 
-				if type(key) == str and key[0] == '!':
-					pass
-				else:
+				if type(key) != str or key[0] != '!':
 					copy[JsonEncoder._encode(key)] = val
 			return copy
 		elif hasattr(obj, 'json'):
@@ -105,19 +103,17 @@ class JsonEncoder:
 		"""
 		Same as _encode() but it keeps dictionary keys starting with !
 		"""
-		if isinstance(obj, dict):
-			copy = {}
-			for key, val in list(obj.items()):
-				if isinstance(val, dict):
-					# This, is a EXTREMELY ugly hack.. but it's the only quick way I can think of to trigger a encoding of sub-dictionaries.
-					val = json.loads(json.dumps(val, cls=UNSAFE_JSON))
-				else:
-					val = JsonEncoder._unsafe_encode(val)
-
-				copy[JsonEncoder._unsafe_encode(key)] = val
-			return copy
-		else:
+		if not isinstance(obj, dict):
 			return JsonEncoder._encode(obj)
+		copy = {}
+		for key, val in list(obj.items()):
+			val = (
+				json.loads(json.dumps(val, cls=UNSAFE_JSON))
+				if isinstance(val, dict)
+				else JsonEncoder._unsafe_encode(val)
+			)
+			copy[JsonEncoder._unsafe_encode(key)] = val
+		return copy
 
 
 class JSON(json.JSONEncoder, json.JSONDecoder):
@@ -246,10 +242,7 @@ class SysCommandWorker:
 	def is_alive(self) -> bool:
 		self.poll()
 
-		if self.started and self.ended is None:
-			return True
-
-		return False
+		return bool(self.started and self.ended is None)
 
 	def write(self, data: bytes, line_ending :bool = True) -> int:
 		assert type(data) == bytes  # TODO: Maybe we can support str as well and encode it
@@ -262,9 +255,7 @@ class SysCommandWorker:
 		return 0
 
 	def make_sure_we_are_executing(self) -> bool:
-		if not self.started:
-			return self.execute()
-		return True
+		return self.execute() if not self.started else True
 
 	def tell(self) -> int:
 		self.make_sure_we_are_executing()
@@ -285,10 +276,7 @@ class SysCommandWorker:
 
 			peak_logfile = pathlib.Path(f"{storage['LOG_PATH']}/cmd_output.txt")
 
-			change_perm = False
-			if peak_logfile.exists() is False:
-				change_perm = True
-
+			change_perm = not peak_logfile.exists()
 			with peak_logfile.open("a") as peek_output_log:
 				peek_output_log.write(str(output))
 
@@ -344,21 +332,16 @@ class SysCommandWorker:
 		if not self.pid:
 			history_logfile = pathlib.Path(f"{storage['LOG_PATH']}/cmd_history.txt")
 			try:
-				change_perm = False
-				if history_logfile.exists() is False:
-					change_perm = True
-
+				change_perm = not history_logfile.exists()
 				try:
 					with history_logfile.open("a") as cmd_log:
 						cmd_log.write(f"{time.time()} {self.cmd}\n")
 
 					if change_perm:
 						os.chmod(str(history_logfile), stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)
-				except PermissionError:
+				except (PermissionError, FileNotFoundError):
 					pass
 					# If history_logfile does not exist, ignore the error
-				except FileNotFoundError:
-					pass
 				except Exception as e:
 					exception_type = type(e).__name__
 					error(f"Unexpected {exception_type} occurred in {self.cmd}: {e}")
@@ -424,12 +407,11 @@ class SysCommand:
 
 	def __iter__(self, *args :List[Any], **kwargs :Dict[str, Any]) -> Iterator[bytes]:
 		if self.session:
-			for line in self.session:
-				yield line
+			yield from self.session
 
 	def __getitem__(self, key :slice) -> Optional[bytes]:
 		if not self.session:
-			raise KeyError(f"SysCommand() does not have an active session.")
+			raise KeyError("SysCommand() does not have an active session.")
 		elif type(key) is slice:
 			start = key.start if key.start else 0
 			end = key.stop if key.stop else len(self.session._trace_log)
@@ -449,7 +431,7 @@ class SysCommand:
 			'callbacks': self._callbacks,
 			'peak': self.peek_output,
 			'environment_vars': self.environment_vars,
-			'session': True if self.session else False
+			'session': bool(self.session),
 		}
 
 	def create_session(self) -> bool:
@@ -482,22 +464,15 @@ class SysCommand:
 		return True
 
 	def decode(self, fmt :str = 'UTF-8') -> Optional[str]:
-		if self.session:
-			return self.session._trace_log.decode(fmt)
-		return None
+		return self.session._trace_log.decode(fmt) if self.session else None
 
 	@property
 	def exit_code(self) -> Optional[int]:
-		if self.session:
-			return self.session.exit_code
-		else:
-			return None
+		return self.session.exit_code if self.session else None
 
 	@property
 	def trace_log(self) -> Optional[bytes]:
-		if self.session:
-			return self.session._trace_log
-		return None
+		return self.session._trace_log if self.session else None
 
 
 def _pid_exists(pid: int) -> bool:
@@ -519,7 +494,7 @@ def run_custom_user_commands(commands :List[str], installation :Installer) -> No
 		os.unlink(f"{installation.target}/var/tmp/user-command.{index}.sh")
 
 
-def json_stream_to_structure(configuration_identifier : str, stream :str, target :dict) -> bool :
+def json_stream_to_structure(configuration_identifier : str, stream :str, target :dict) -> bool:
 	"""
 	Function to load a stream (file (as name) or valid JSON string into an existing dictionary
 	Returns true if it could be done
@@ -532,30 +507,26 @@ def json_stream_to_structure(configuration_identifier : str, stream :str, target
 	if parsed_url.scheme: # The stream is in fact a URL that should be grabbed
 		try:
 			with urllib.request.urlopen(urllib.request.Request(stream, headers={'User-Agent': 'ArchInstall'})) as response:
-				target.update(json.loads(response.read()))
+				target |= json.loads(response.read())
 		except urllib.error.HTTPError as err:
 			error(f"Could not load {configuration_identifier} via {parsed_url} due to: {err}")
 			return False
+	elif pathlib.Path(stream).exists():
+		try:
+			with pathlib.Path(stream).open() as fh:
+				target.update(json.load(fh))
+		except Exception as err:
+			error(f"{configuration_identifier} = {stream} does not contain a valid JSON format: {err}")
+			return False
+	elif stream.strip().startswith('{') and stream.strip().endswith('}'):
+		try:
+			target.update(json.loads(stream))
+		except Exception as e:
+			error(f"{configuration_identifier} Contains an invalid JSON format: {e}")
+			return False
 	else:
-		if pathlib.Path(stream).exists():
-			try:
-				with pathlib.Path(stream).open() as fh:
-					target.update(json.load(fh))
-			except Exception as err:
-				error(f"{configuration_identifier} = {stream} does not contain a valid JSON format: {err}")
-				return False
-		else:
-			# NOTE: This is a rudimentary check if what we're trying parse is a dict structure.
-			# Which is the only structure we tolerate anyway.
-			if stream.strip().startswith('{') and stream.strip().endswith('}'):
-				try:
-					target.update(json.loads(stream))
-				except Exception as e:
-					error(f"{configuration_identifier} Contains an invalid JSON format: {e}")
-					return False
-			else:
-				error(f"{configuration_identifier} is neither a file nor is a JSON string")
-				return False
+		error(f"{configuration_identifier} is neither a file nor is a JSON string")
+		return False
 
 	return True
 

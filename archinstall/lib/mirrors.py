@@ -48,18 +48,15 @@ class CustomMirror:
 
 	@classmethod
 	def parse_args(cls, args: List[Dict[str, str]]) -> List['CustomMirror']:
-		configs = []
-		for arg in args:
-			configs.append(
-				CustomMirror(
-					arg['name'],
-					arg['url'],
-					SignCheck(arg['sign_check']),
-					SignOption(arg['sign_option'])
-				)
+		return [
+			CustomMirror(
+				arg['name'],
+				arg['url'],
+				SignCheck(arg['sign_check']),
+				SignOption(arg['sign_option']),
 			)
-
-		return configs
+			for arg in args
+		]
 
 
 @dataclass
@@ -187,11 +184,7 @@ class MirrorMenu(AbstractSubMenu):
 		data_store: Dict[str, Any],
 		preset: Optional[MirrorConfiguration] = None
 	):
-		if preset:
-			self._preset = preset
-		else:
-			self._preset = MirrorConfiguration()
-
+		self._preset = preset if preset else MirrorConfiguration()
 		super().__init__(data_store=data_store)
 
 	def setup_selection_menu_options(self):
@@ -242,11 +235,7 @@ def select_mirror_regions(preset_values: Dict[str, List[str]] = {}) -> Dict[str,
 	:return: The dictionary information about a mirror/region.
 	:rtype: dict
 	"""
-	if preset_values is None:
-		preselected = None
-	else:
-		preselected = list(preset_values.keys())
-
+	preselected = None if preset_values is None else list(preset_values.keys())
 	mirrors = list_mirrors()
 
 	choice = Menu(
@@ -269,8 +258,7 @@ def select_mirror_regions(preset_values: Dict[str, List[str]] = {}) -> Dict[str,
 
 
 def select_custom_mirror(prompt: str = '', preset: List[CustomMirror] = []):
-	custom_mirrors = CustomMirrorList(prompt, preset).run()
-	return custom_mirrors
+	return CustomMirrorList(prompt, preset).run()
 
 
 def add_custom_mirrors(mirrors: List[CustomMirror]):
@@ -331,8 +319,4 @@ def list_mirrors() -> Dict[str, List[str]]:
 			return regions
 
 	regions = _parse_mirror_list(mirrorlist)
-	sorted_regions = {}
-	for region, urls in regions.items():
-		sorted_regions[region] = sorted(urls, reverse=True)
-
-	return sorted_regions
+	return {region: sorted(urls, reverse=True) for region, urls in regions.items()}

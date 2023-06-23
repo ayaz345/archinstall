@@ -115,11 +115,11 @@ def perform_installation(mountpoint: Path):
 	disk_encryption: disk.DiskEncryption = archinstall.arguments.get('disk_encryption', None)
 
 	with Installer(
-		mountpoint,
-		disk_config,
-		disk_encryption=disk_encryption,
-		kernels=archinstall.arguments.get('kernels', ['linux'])
-	) as installation:
+			mountpoint,
+			disk_config,
+			disk_encryption=disk_encryption,
+			kernels=archinstall.arguments.get('kernels', ['linux'])
+		) as installation:
 		# Mount all the drives to the desired mountpoint
 		if disk_config.config_type != disk.DiskLayoutType.Pre_mount:
 			installation.mount_ordered_layout()
@@ -156,11 +156,7 @@ def perform_installation(mountpoint: Path):
 
 		installation.add_bootloader(archinstall.arguments["bootloader"])
 
-		# If user selected to copy the current ISO network configuration
-		# Perform a copy of the config
-		network_config = archinstall.arguments.get('nic', None)
-
-		if network_config:
+		if network_config := archinstall.arguments.get('nic', None):
 			handler = NetworkConfigurationHandler(network_config)
 			handler.config_installer(
 				installation,

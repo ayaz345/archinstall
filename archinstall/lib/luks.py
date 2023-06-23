@@ -26,9 +26,7 @@ class Luks2:
 
 	@property
 	def mapper_dev(self) -> Optional[Path]:
-		if self.mapper_name:
-			return Path(f'/dev/mapper/{self.mapper_name}')
-		return None
+		return Path(f'/dev/mapper/{self.mapper_name}') if self.mapper_name else None
 
 	def __post_init__(self):
 		if self.luks_dev_path is None:
@@ -100,16 +98,15 @@ class Luks2:
 				if retry_attempt != storage['DISK_RETRY_ATTEMPTS'] - 1:
 					continue
 
-				if err.exit_code == 1:
-					info(f'luks2 partition currently in use: {self.luks_dev_path}')
-					info('Attempting to unmount, crypt-close and trying encryption again')
-
-					self.lock()
-					# Then try again to set up the crypt-device
-					SysCommand(cryptsetup_args)
-				else:
+				if err.exit_code != 1:
 					raise DiskError(f'Could not encrypt volume "{self.luks_dev_path}": {err}')
 
+				info(f'luks2 partition currently in use: {self.luks_dev_path}')
+				info('Attempting to unmount, crypt-close and trying encryption again')
+
+				self.lock()
+				# Then try again to set up the crypt-device
+				SysCommand(cryptsetup_args)
 		return key_file
 
 	def _get_luks_uuid(self) -> str:
@@ -192,12 +189,12 @@ class Luks2:
 		crypttab_path = target_path / 'etc/crypttab'
 
 		if key_file.exists():
-			if not override:
-				info(f'Key file {key_file} already exists, keeping existing')
-				return
-			else:
+			if override:
 				info(f'Key file {key_file} already exists, overriding')
 
+			else:
+				info(f'Key file {key_file} already exists, keeping existing')
+				return
 		key_file.parent.mkdir(parents=True, exist_ok=True)
 
 		with open(key_file, "w") as keyfile:

@@ -102,9 +102,7 @@ class ProfileHandler:
 		if details := profile_config.get('details', []):
 			resolved = {detail: self.get_profile_by_name(detail) for detail in details if detail}
 			valid = [p for p in resolved.values() if p is not None]
-			invalid = ', '.join([k for k, v in resolved.items() if v is None])
-
-			if invalid:
+			if invalid := ', '.join([k for k, v in resolved.items() if v is None]):
 				info(f'No profile definition found: {invalid}')
 
 		custom_settings = profile_config.get('custom_settings', {})
@@ -165,8 +163,7 @@ class ProfileHandler:
 
 	def get_mac_addr_profiles(self) -> List[Profile]:
 		tailored = list(filter(lambda x: x.is_tailored(), self.profiles))
-		match_mac_addr_profiles = list(filter(lambda x: x.name in self._local_mac_addresses, tailored))
-		return match_mac_addr_profiles
+		return list(filter(lambda x: x.name in self._local_mac_addresses, tailored))
 
 	def install_greeter(self, install_session: 'Installer', greeter: GreeterType):
 		packages = []
@@ -277,9 +274,7 @@ class ProfileHandler:
 		that the provided list contains only default_profiles with unique names
 		"""
 		counter = Counter([p.name for p in profiles])
-		duplicates = list(filter(lambda x: x[1] != 1, counter.items()))
-
-		if len(duplicates) > 0:
+		if duplicates := list(filter(lambda x: x[1] != 1, counter.items())):
 			err = str(_('Profiles must have unique name, but profile definitions with duplicate name found: {}')).format(duplicates[0][0])
 			error(err)
 			sys.exit(1)
@@ -290,7 +285,7 @@ class ProfileHandler:
 		legacy profile definition
 		"""
 		with open(file, 'r') as fp:
-			for line in fp.readlines():
+			for line in fp:
 				if '__packages__' in line:
 					return True
 		return False
@@ -382,13 +377,7 @@ class ProfileHandler:
 
 		if choice.type_ == MenuSelectionType.Selection:
 			value = choice.value
-			if multi:
-				# this is quite dirty and should eb switched to a
-				# dedicated return type instead
-				choice.value = [options[val] for val in value]  # type: ignore
-			else:
-				choice.value = options[value]  # type: ignore
-
+			choice.value = [options[val] for val in value] if multi else options[value]
 		return choice
 
 	def preview_text(self, selection: str) -> Optional[str]:

@@ -104,12 +104,9 @@ class FormattedOutput:
 
 	@classmethod
 	def as_columns(cls, entries: List[str], cols: int) -> str:
-		chunks = []
 		output = ''
 
-		for i in range(0, len(entries), cols):
-			chunks.append(entries[i:i + cols])
-
+		chunks = [entries[i:i + cols] for i in range(0, len(entries), cols)]
 		for row in chunks:
 			out_fmt = '{: <30} ' * len(row)
 			output += out_fmt.format(*row) + '\n'
@@ -222,19 +219,14 @@ def _stylize_output(
 
 	foreground = {key: f'3{colors[key]}' for key in colors}
 	background = {key: f'4{colors[key]}' for key in colors}
-	code_list = []
-
-	if text == '' and reset:
+	if not text and reset:
 		return '\x1b[%sm' % '0'
 
-	code_list.append(foreground[str(fg)])
-
+	code_list = [foreground[fg]]
 	if bg:
 		code_list.append(background[str(bg)])
 
-	for o in font:
-		code_list.append(o.value)
-
+	code_list.extend(o.value for o in font)
 	ansi = ';'.join(code_list)
 
 	return f'\033[{ansi}m{text}\033[0m'

@@ -32,11 +32,7 @@ def is_subpath(first: Path, second: Path):
 
 
 def format_cols(items: List[str], header: Optional[str]) -> str:
-	if header:
-		text = f'{header}:\n'
-	else:
-		text = ''
-
+	text = f'{header}:\n' if header else ''
 	nr_items = len(items)
 	if nr_items <= 5:
 		col = 1

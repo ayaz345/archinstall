@@ -22,10 +22,7 @@ class Bootloader(Enum):
 
 	@classmethod
 	def get_default(cls) -> Bootloader:
-		if SysInfo.has_uefi():
-			return Bootloader.Systemd
-		else:
-			return Bootloader.Grub
+		return Bootloader.Systemd if SysInfo.has_uefi() else Bootloader.Grub
 
 	@classmethod
 	def from_arg(cls, bootloader: str) -> Bootloader:

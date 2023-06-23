@@ -152,7 +152,7 @@ class Profile:
 		return self.profile_type == ProfileType.ServerType
 
 	def is_desktop_type_profile(self) -> bool:
-		return self.profile_type == ProfileType.DesktopEnv or self.profile_type == ProfileType.WindowMgr
+		return self.profile_type in [ProfileType.DesktopEnv, ProfileType.WindowMgr]
 
 	def is_xorg_type_profile(self) -> bool:
 		return self.profile_type == ProfileType.Xorg
@@ -166,10 +166,7 @@ class Profile:
 	def is_graphic_driver_supported(self) -> bool:
 		if not self._current_selection:
 			return self._support_gfx_driver
-		else:
-			if any([p._support_gfx_driver for p in self._current_selection]):
-				return True
-			return False
+		return any(p._support_gfx_driver for p in self._current_selection)
 
 	def is_greeter_supported(self) -> bool:
 		return self._support_greeter
@@ -180,11 +177,8 @@ class Profile:
 		profile it will automatically display that one in the preivew.
 		If no preview or a different text should be displayed just
 		"""
-		if self.description:
-			return self.description
-		return None
+		return self.description if self.description else None
 
 	def packages_text(self) -> str:
 		header = str(_('Installed packages'))
-		output = format_cols(self.packages, header)
-		return output
+		return format_cols(self.packages, header)

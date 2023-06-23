@@ -47,9 +47,7 @@ class ConfigurationOutput:
 		for key in self._config:
 			if key in self._sensitive:
 				self._user_credentials[key] = self._config[key]
-			elif key in self._ignore:
-				pass
-			else:
+			elif key not in self._ignore:
 				self._user_config[key] = self._config[key]
 
 			# special handling for encryption password

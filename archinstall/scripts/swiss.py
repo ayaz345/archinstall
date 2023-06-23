@@ -180,11 +180,11 @@ def perform_installation(mountpoint: Path, exec_mode: ExecutionMode):
 	locale_config: locale.LocaleConfiguration = archinstall.arguments['locale_config']
 
 	with Installer(
-		mountpoint,
-		disk_config,
-		disk_encryption=disk_encryption,
-		kernels=archinstall.arguments.get('kernels', ['linux'])
-	) as installation:
+			mountpoint,
+			disk_config,
+			disk_encryption=disk_encryption,
+			kernels=archinstall.arguments.get('kernels', ['linux'])
+		) as installation:
 		if exec_mode in [ExecutionMode.Full, ExecutionMode.Only_HD]:
 			installation.mount_ordered_layout()
 
@@ -220,11 +220,7 @@ def perform_installation(mountpoint: Path, exec_mode: ExecutionMode):
 
 			installation.add_bootloader(archinstall.arguments["bootloader"])
 
-			# If user selected to copy the current ISO network configuration
-			# Perform a copy of the config
-			network_config = archinstall.arguments.get('nic', None)
-
-			if network_config:
+			if network_config := archinstall.arguments.get('nic', None):
 				handler = models.NetworkConfigurationHandler(network_config)
 				handler.config_installer(
 					installation,

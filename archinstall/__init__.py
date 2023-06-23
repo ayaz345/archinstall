@@ -79,7 +79,9 @@ def define_arguments():
 	Remember that the property/entry name python assigns to the parameters is the first string defined as argument and
 	dashes inside it '-' are changed to '_'
 	"""
-	parser.add_argument("-v", "--version", action="version", version="%(prog)s " + __version__)
+	parser.add_argument(
+		"-v", "--version", action="version", version=f"%(prog)s {__version__}"
+	)
 	parser.add_argument("--config", nargs="?", help="JSON configuration file or URL")
 	parser.add_argument("--creds", nargs="?", help="JSON credentials configuration file")
 	parser.add_argument("--silent", action="store_true",
@@ -132,16 +134,15 @@ def parse_unspecified_argument_list(unknowns :list, multiple :bool = False, err 
 				config[key] = element
 				last_key = key # multiple
 				key = None
-			else:
-				if multiple and last_key:
-					if isinstance(config[last_key],str):
-						config[last_key] = [config[last_key],element]
-					else:
-						config[last_key].append(element)
-				elif err:
-					raise ValueError(f"Entry {element} is not related to any argument")
+			elif multiple and last_key:
+				if isinstance(config[last_key],str):
+					config[last_key] = [config[last_key],element]
 				else:
-					print(f" We ignore the entry {element} as it isn't related to any argument")
+					config[last_key].append(element)
+			elif err:
+				raise ValueError(f"Entry {element} is not related to any argument")
+			else:
+				print(f" We ignore the entry {element} as it isn't related to any argument")
 	return config
 
 
@@ -191,7 +192,7 @@ def get_arguments() -> Dict[str, Any]:
 
 	# load the parameters. first the known, then the unknowns
 	clean_args = cleanup_empty_args(args)
-	config.update(clean_args)
+	config |= clean_args
 	config.update(parse_unspecified_argument_list(unknowns))
 	# amend the parameters (check internal consistency)
 	# Installation can't be silent if config is not passed

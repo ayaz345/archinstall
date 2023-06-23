@@ -221,9 +221,8 @@ class Size:
 	) -> str:
 		if self.unit == Unit.Percent:
 			return f'{self.value}%'
-		else:
-			target_size = self.convert(target_unit, sector_size)
-			return f'{target_size.value} {target_unit.name}'
+		target_size = self.convert(target_unit, sector_size)
+		return f'{target_size.value} {target_unit.name}'
 
 	def _normalize(self) -> int:
 		"""
@@ -344,7 +343,9 @@ class _DeviceInfo:
 	dirty: bool
 
 	def as_json(self) -> Dict[str, Any]:
-		total_free_space = sum([region.get_length(unit=Unit.MiB) for region in self.free_space_regions])
+		total_free_space = sum(
+			region.get_length(unit=Unit.MiB) for region in self.free_space_regions
+		)
 		return {
 			'Model': self.model,
 			'Path': str(self.path),
@@ -597,9 +598,7 @@ class PartitionModification:
 
 	@property
 	def obj_id(self) -> str:
-		if hasattr(self, '_obj_id'):
-			return str(self._obj_id)
-		return ''
+		return str(self._obj_id) if hasattr(self, '_obj_id') else ''
 
 	@property
 	def safe_dev_path(self) -> Path:
@@ -609,17 +608,15 @@ class PartitionModification:
 
 	@classmethod
 	def from_existing_partition(cls, partition_info: _PartitionInfo) -> PartitionModification:
+		subvol_mods = []
 		if partition_info.btrfs_subvol_infos:
 			mountpoint = None
-			subvol_mods = []
-			for info in partition_info.btrfs_subvol_infos:
-				subvol_mods.append(
-					SubvolumeModification.from_existing_subvol_info(info)
-				)
+			subvol_mods.extend(
+				SubvolumeModification.from_existing_subvol_info(info)
+				for info in partition_info.btrfs_subvol_infos
+			)
 		else:
 			mountpoint = partition_info.mountpoints[0] if partition_info.mountpoints else None
-			subvol_mods = []
-
 		return PartitionModification(
 			status=ModificationStatus.Exist,
 			type=partition_info.type,
@@ -807,10 +804,11 @@ class DiskEncryption:
 	) -> 'DiskEncryption':
 		enc_partitions = []
 		for mod in disk_config.device_modifications:
-			for part in mod.partitions:
-				if part.obj_id in arg.get('partitions', []):
-					enc_partitions.append(part)
-
+			enc_partitions.extend(
+				part
+				for part in mod.partitions
+				if part.obj_id in arg.get('partitions', [])
+			)
 		enc = DiskEncryption(
 			EncryptionType(arg['encryption_type']),
 			password,
@@ -978,13 +976,11 @@ def _fetch_lsblk_info(dev_path: Optional[Union[Path, str]] = None, retry: int = 
 			result = SysCommand(f'lsblk --json -b -o+{lsblk_fields} {dev_path}')
 			break
 		except SysCallError as err:
-			# Get the output minus the message/info from lsblk if it returns a non-zero exit code.
-			if err.worker:
-				err_str = err.worker.decode('UTF-8')
-				debug(f'Error calling lsblk: {err_str}')
-			else:
+			if not err.worker:
 				raise err
 
+			err_str = err.worker.decode('UTF-8')
+			debug(f'Error calling lsblk: {err_str}')
 			if retry_attempt == retry - 1:
 				raise err
 
